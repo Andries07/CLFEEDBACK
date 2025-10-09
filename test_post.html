@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>POST Smoke Test</title></head>
+<body style="font-family:system-ui;max-width:680px;margin:30px auto">
+  <h2>Google Apps Script POST Smoke Test</h2>
+  <label>Apps Script URL (/exec): <input id="url" style="width:100%"></label>
+  <br><br>
+  <button id="send">Send sample POST</button>
+  <pre id="out" style="background:#f6f6f6;padding:12px;border-radius:8px;min-height:80px"></pre>
+
+<script>
+document.getElementById('send').onclick = async () => {
+  const url = document.getElementById('url').value.trim();
+  const out = document.getElementById('out');
+  out.textContent = 'Posting...';
+  const payload = {
+    storeId: "CL-PRETORIA-001",
+    deviceLabel: "Front Counter",
+    pressedAtUtc: new Date().toISOString(),
+    answers: [{ questionId:"Q1", choiceLabel:"Bad", choiceScore:1 }],
+    customer: { feedback: "smoke test" }
+  };
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    const txt = await r.text();
+    out.textContent = 'Status: ' + r.status + '\n\n' + txt;
+  } catch (e) {
+    out.textContent = 'ERROR: ' + e;
+  }
+};
+</script>
+</body>
+</html>
