@@ -241,21 +241,29 @@
   });
 
   // PWA: service worker + config.json override (only on http/https)
-/*  if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-    (async () => {
-      try {
-        const r = await fetch('./config.json?_=' + Date.now());
-        if (r.ok) {
-          const cfg = await r.json();
-          Object.assign(CFG, cfg);
-          const f = document.getElementById('footer');
-          f.textContent = (CFG.storeId || '') + ' • ' + (CFG.deviceLabel || '');
-        }
-      } catch (e) {}
-    })();
-  }
-*/
+if (location.protocol.startsWith('http')) {
+  // (Re)register service worker
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
+  // Load config.json to override ONLY store fields (not apiUrl)
+  (async () => {
+    try {
+      const r = await fetch('./config.json?_=' + Date.now()); // cache-bust
+      if (r.ok) {
+        const cfg = await r.json();
+        // Only merge store info — do NOT touch apiUrl here
+        if (cfg.storeId)     CFG.storeId = cfg.storeId;
+        if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
+        if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
+      }
+    } catch (e) {
+      console.warn('config.json load skipped:', e);
+    }
+    // Optional footer/debug
+    const f = document.getElementById('footer');
+    if (f) f.textContent = (CFG.storeId || '') + ' • ' + (CFG.deviceLabel || '');
+  })();
+}
   // Initial render
   render();
 </script>
