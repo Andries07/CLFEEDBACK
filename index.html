@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chicken Licken — Customer Feedback</title>
+<link rel="manifest" href="manifest.json" />
+<style>
+  :root{ --gap:clamp(10px, 2.2vw, 18px); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: #111; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
+    background: #000 url('background.jpg') center/cover no-repeat fixed;
+  }
+  .veil { background: rgba(255,255,255,.92); min-height: 100%; }
+  .container { max-width: min(1100px, 96vw); margin: 0 auto; padding: clamp(12px, 3vw, 28px); }
+  h1 { margin: 0 0 10px 0; text-align: center; font-size: clamp(22px, 4.5vw, 36px); font-weight: 800; }
+  p.lead { text-align: center; margin: 0 0 var(--gap) 0; opacity: .9; font-size: clamp(14px, 2.4vw, 18px); }
+  .q { background: #fff; border-radius: 18px; padding: clamp(12px, 2.4vw, 18px); box-shadow: 0 8px 28px rgba(0,0,0,.12); margin-bottom: var(--gap); }
+  .q h3 { margin: 0 0 10px 0; font-size: clamp(16px, 3.2vw, 22px); }
+  .btns { display: grid; gap: var(--gap); grid-template-columns: repeat(5, minmax(90px, 1fr)); }
+  @media (max-width: 980px) { .btns { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px) { .btns { grid-template-columns: repeat(2, 1fr); } }
+  button.option {
+    font-size: clamp(14px, 2.6vw, 20px); padding: clamp(10px, 2.4vw, 14px);
+    border: 0; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.12);
+    cursor: pointer; font-weight: 700; min-height: 58px; transition: .12s transform, .12s box-shadow, .12s outline-color;
+    width: 100%;
+  }
+  .excellent { background: #1ecb4f; color: #fff; }
+  .good { background: #9adf32; }
+  .average { background: #ffd13b; }
+  .poor { background: #ff9e2c; }
+  .bad { background: #ff4d4f; color: #fff; }
+  .selected { outline: 3px solid #222; transform: translateY(-2px); }
+  .card {
+    background: #fff; border-radius: 18px; padding: clamp(12px, 2.4vw, 18px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.12); margin-top: var(--gap); overflow: hidden;
+  }
+  .card h3 { margin: 0 0 8px 0; font-size: clamp(16px,3vw,20px); }
+  label { font-weight: 600; display: block; margin: 8px 0 6px; font-size: clamp(13px,2.3vw,16px); }
+  input, textarea {
+    width: 100%; border-radius: 12px; border: 1px solid #ddd;
+    padding: clamp(10px, 2.4vw, 12px); font-size: clamp(14px, 2.6vw, 16px);
+    background: #fff;
+  }
+  textarea { min-height: clamp(100px, 20vh, 140px); resize: vertical; }
+  .consent {
+    display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; margin: 6px 0 8px;
+  }
+  .consent input { width: 18px; height: 18px; }
+  .consent .text { font-size: clamp(12px, 2.2vw, 14px); line-height: 1.3; }
+  .warn { color: #b00020; font-size: clamp(12px, 2.2vw, 14px); margin-top: 6px; display: none; }
+  .actions { display: flex; justify-content: center; margin-top: var(--gap); }
+  .submitBtn {
+    background: #111; color: #fff; border: 0; border-radius: 14px;
+    padding: clamp(12px,2.6vw,16px) clamp(18px,3vw,22px);
+    font-size: clamp(15px,2.8vw,18px); cursor: not-allowed; opacity: .5; transition: .15s;
+  }
+  .submitBtn.enabled { cursor: pointer; opacity: 1; }
+  .footer { opacity: .8; text-align: center; font-size: clamp(12px, 2.2vw, 14px); margin: 10px 0 6px; }
+  .thanks { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none;
+            align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+  .thanks .box { background: #fff; border-radius: 18px; padding: 24px 28px; text-align: center;
+                 box-shadow: 0 10px 30px rgba(0,0,0,.25); max-width: min(420px, 90vw); }
+  .thanks h2 { margin: 0 0 8px 0; font-size: clamp(18px,4vw,24px); }
+</style>
+</head>
+<body>
+  <div class="veil">
+    <div class="container">
+      <h1>Chicken Licken — Quick Service Feedback</h1>
+      <p class="lead">Please answer all questions. Optional details are at the bottom.</p>
+
+      <!-- QUESTIONS -->
+      <div id="questions"></div>
+
+      <!-- OPTIONAL DETAILS (contained within the card) -->
+      <div class="card" id="detailsCard">
+        <h3>Optional details</h3>
+        <div class="consent">
+          <input type="checkbox" id="consent" />
+          <div class="text">
+            <strong>POPIA Consent</strong><br/>
+            I understand that by providing my personal information, I consent to it being collected and processed by Chicken Licken for customer service and quality feedback purposes, in accordance with the Protection of Personal Information Act (POPIA). My information will not be shared with third parties and may be deleted upon request.
+          </div>
+        </div>
+        <label for="custName">Name</label>
+        <input id="custName" placeholder="Name" />
+        <label for="custSurname">Surname</label>
+        <input id="custSurname" placeholder="Surname" />
+        <label for="custPhone">Phone number</label>
+        <input id="custPhone" placeholder="+27 …" inputmode="tel" />
+        <label for="custFeedback">Additional feedback (optional)</label>
+        <textarea id="custFeedback" placeholder="Tell us more (you may stay anonymous)"></textarea>
+        <div id="consentWarn" class="warn">Please confirm POPIA consent before submitting personal information.</div>
+      </div>
+
+      <div class="actions">
+        <button id="submitBtn" class="submitBtn" disabled>Submit</button>
+      </div>
+
+      <div class="footer" id="footer">CL-PRETORIA-001 • Front Counter</div>
+    </div>
+  </div>
+
+  <div class="thanks" id="thanks"><div class="box">
+    <h2>Thank you! 🎉</h2>
+    <p>Your feedback has been recorded.</p>
+  </div></div>
+
+<script>
+  // Config (overridden by config.json when hosted over http/https)
+  const CFG = { apiUrl: "", storeId: "CL-PRETORIA-001", deviceLabel: "Front Counter", deviceId: "" };
+
+  const QUESTIONS = [
+    { id: "Q1", text: "Speed of service at the counter" },
+    { id: "Q2", text: "Friendliness of the staff" },
+    { id: "Q3", text: "Order accuracy (what you received vs ordered)" },
+    { id: "Q4", text: "Food temperature and freshness" },
+    { id: "Q5", text: "Restaurant cleanliness (counter & seating)" }
+  ];
+
+  const CHOICES = [
+    { label: "Excellent", emoji: "😄", score: 5, cls: "excellent" },
+    { label: "Good",      emoji: "🙂", score: 4, cls: "good" },
+    { label: "Average",   emoji: "😐", score: 3, cls: "average" },
+    { label: "Poor",      emoji: "🙁", score: 2, cls: "poor" },
+    { label: "Bad",       emoji: "😡", score: 1, cls: "bad" }
+  ];
+
+  const answers = new Map(); // questionId -> {score,label,choice}
+
+  function updateSubmitState() {
+    const submit = document.getElementById('submitBtn');
+    const allAnswered = (answers.size === QUESTIONS.length);
+    submit.disabled = !allAnswered;
+    submit.classList.toggle('enabled', allAnswered);
+    submit.style.cursor = allAnswered ? 'pointer' : 'not-allowed';
+  }
+
+  function render() {
+    const root = document.getElementById('questions');
+    root.innerHTML = '';
+    QUESTIONS.forEach(q => {
+      const el = document.createElement('div');
+      el.className = 'q';
+      const btns = CHOICES.map(c => (
+        `<button class="option ${c.cls}" data-score="${c.score}" data-qid="${q.id}" data-label="${c.label}">
+          ${c.emoji} ${c.label}
+        </button>`
+      )).join('');
+      el.innerHTML = `<h3>${q.text}</h3><div class="btns">${btns}</div>`;
+      root.appendChild(el);
+    });
+
+    document.querySelectorAll('.btns').forEach(group => {
+      group.addEventListener('click', (e) => {
+        const btn = e.target.closest('button.option'); if (!btn) return;
+        // Clear previous selection
+        group.querySelectorAll('button.option').forEach(b => b.classList.remove('selected'));
+        // Select new
+        btn.classList.add('selected');
+        const score = +btn.dataset.score;
+        const label = btn.dataset.label;
+        const choice = score >= 5 ? 'Green' : score >= 3 ? 'Yellow' : 'Red';
+        answers.set(btn.dataset.qid, { score, label, choice });
+        updateSubmitState();
+      });
+    });
+
+    updateSubmitState();
+  }
+
+  function hasPersonalInfo() {
+    return !!(document.getElementById('custName').value.trim() ||
+              document.getElementById('custSurname').value.trim() ||
+              document.getElementById('custPhone').value.trim());
+  }
+
+  function showThanks() {
+    const el = document.getElementById('thanks');
+    el.style.display = 'flex';
+    setTimeout(() => { el.style.display = 'none'; }, 2400);
+  }
+
+  function clearForm() {
+    document.getElementById('custName').value = '';
+    document.getElementById('custSurname').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('custFeedback').value = '';
+    document.getElementById('consent').checked = false;
+    answers.clear();
+    document.querySelectorAll('.btns .option').forEach(b => b.classList.remove('selected'));
+    updateSubmitState();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function send(apiUrl, payload) {
+    if (!apiUrl) throw new Error("No API URL configured");
+    const r = await fetch(CFG.apiUrl, {
+  method: "POST",
+  headers: { "Content-Type": "text/plain;charset=utf-8" },
+  body: JSON.stringify(payload)
+});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', async () => {
+    const allAnswered = (answers.size === QUESTIONS.length);
+    if (!allAnswered) return;
+
+    const consent = document.getElementById('consent').checked;
+    const warn = document.getElementById('consentWarn');
+    if (hasPersonalInfo() && !consent) { warn.style.display = 'block'; return; } else { warn.style.display = 'none'; }
+
+    const payload = {
+      storeId: CFG.storeId,
+      deviceId: CFG.deviceId || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)),
+      deviceLabel: CFG.deviceLabel,
+      pressedAtUtc: new Date().toISOString(),
+      answers: Array.from(answers, ([questionId, v]) => ({ questionId, choice: v.choice, choiceScore: v.score, choiceLabel: v.label })),
+      customer: {
+        name: document.getElementById('custName').value.trim() || null,
+        surname: document.getElementById('custSurname').value.trim() || null,
+        phone: document.getElementById('custPhone').value.trim() || null,
+        feedback: document.getElementById('custFeedback').value.trim() || null,
+        consent: hasPersonalInfo() ? !!document.getElementById('consent').checked : null
+      }
+    };
+
+    try { await send(CFG.apiUrl, payload); showThanks(); clearForm(); }
+    catch (e) {
+      const key = "feedback_queue_pwa_v1";
+      const q = JSON.parse(localStorage.getItem(key) || "[]");
+      q.push(payload);
+      localStorage.setItem(key, JSON.stringify(q));
+      showThanks(); clearForm();
+    }
+  });
+
+  // PWA: service worker + config.json override (only on http/https)
+  if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+    (async () => {
+      try {
+        const r = await fetch('./config.json?_=' + Date.now());
+        if (r.ok) {
+          const cfg = await r.json();
+          Object.assign(CFG, cfg);
+          const f = document.getElementById('footer');
+          f.textContent = (CFG.storeId || '') + ' • ' + (CFG.deviceLabel || '');
+        }
+      } catch (e) {}
+    })();
+  }
+
+  // Initial render
+  render();
+</script>
+</body>
+</html>
