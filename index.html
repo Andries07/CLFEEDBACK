@@ -1,271 +1,415 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Chicken Licken — Customer Feedback</title>
-<link rel="manifest" href="manifest.json" />
-<style>
-  :root{ --gap:clamp(10px, 2.2vw, 18px); }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body {
-    margin: 0; color: #111; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
-    background: #000 url('background.jpg') center/cover no-repeat fixed;
-  }
-  .veil { background: rgba(255,255,255,.92); min-height: 100%; }
-  .container { max-width: min(1100px, 96vw); margin: 0 auto; padding: clamp(12px, 3vw, 28px); }
-  h1 { margin: 0 0 10px 0; text-align: center; font-size: clamp(22px, 4.5vw, 36px); font-weight: 800; }
-  p.lead { text-align: center; margin: 0 0 var(--gap) 0; opacity: .9; font-size: clamp(14px, 2.4vw, 18px); }
-  .q { background: #fff; border-radius: 18px; padding: clamp(12px, 2.4vw, 18px); box-shadow: 0 8px 28px rgba(0,0,0,.12); margin-bottom: var(--gap); }
-  .q h3 { margin: 0 0 10px 0; font-size: clamp(16px, 3.2vw, 22px); }
-  .btns { display: grid; gap: var(--gap); grid-template-columns: repeat(5, minmax(90px, 1fr)); }
-  @media (max-width: 980px) { .btns { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 640px) { .btns { grid-template-columns: repeat(2, 1fr); } }
-  button.option {
-    font-size: clamp(14px, 2.6vw, 20px); padding: clamp(10px, 2.4vw, 14px);
-    border: 0; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.12);
-    cursor: pointer; font-weight: 700; min-height: 58px; transition: .12s transform, .12s box-shadow, .12s outline-color;
-    width: 100%;
-  }
-  .excellent { background: #1ecb4f; color: #fff; }
-  .good { background: #9adf32; }
-  .average { background: #ffd13b; }
-  .poor { background: #ff9e2c; }
-  .bad { background: #ff4d4f; color: #fff; }
-  .selected { outline: 3px solid #222; transform: translateY(-2px); }
-  .card {
-    background: #fff; border-radius: 18px; padding: clamp(12px, 2.4vw, 18px);
-    box-shadow: 0 8px 28px rgba(0,0,0,.12); margin-top: var(--gap); overflow: hidden;
-  }
-  .card h3 { margin: 0 0 8px 0; font-size: clamp(16px,3vw,20px); }
-  label { font-weight: 600; display: block; margin: 8px 0 6px; font-size: clamp(13px,2.3vw,16px); }
-  input, textarea {
-    width: 100%; border-radius: 12px; border: 1px solid #ddd;
-    padding: clamp(10px, 2.4vw, 12px); font-size: clamp(14px, 2.6vw, 16px);
-    background: #fff;
-  }
-  textarea { min-height: clamp(100px, 20vh, 140px); resize: vertical; }
-  .consent {
-    display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; margin: 6px 0 8px;
-  }
-  .consent input { width: 18px; height: 18px; }
-  .consent .text { font-size: clamp(12px, 2.2vw, 14px); line-height: 1.3; }
-  .warn { color: #b00020; font-size: clamp(12px, 2.2vw, 14px); margin-top: 6px; display: none; }
-  .actions { display: flex; justify-content: center; margin-top: var(--gap); }
-  .submitBtn {
-    background: #111; color: #fff; border: 0; border-radius: 14px;
-    padding: clamp(12px,2.6vw,16px) clamp(18px,3vw,22px);
-    font-size: clamp(15px,2.8vw,18px); cursor: not-allowed; opacity: .5; transition: .15s;
-  }
-  .submitBtn.enabled { cursor: pointer; opacity: 1; }
-  .footer { opacity: .8; text-align: center; font-size: clamp(12px, 2.2vw, 14px); margin: 10px 0 6px; }
-  .thanks { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none;
-            align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-  .thanks .box { background: #fff; border-radius: 18px; padding: 24px 28px; text-align: center;
-                 box-shadow: 0 10px 30px rgba(0,0,0,.25); max-width: min(420px, 90vw); }
-  .thanks h2 { margin: 0 0 8px 0; font-size: clamp(18px,4vw,24px); }
-</style>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Customer Feedback Kiosk</title>
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root {
+      --bg: #111;
+      --veil: rgba(255,255,255,0.92);
+      --accent: #f97316;
+      --good: #16a34a;
+      --warn: #eab308;
+      --bad:  #dc2626;
+      --card: #ffffff;
+    }
+    html, body { margin:0; padding:0; background:#000; color:#111; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    .hero {
+      min-height: 100dvh;
+      background: url('./background.jpg') center/cover no-repeat fixed;
+      display: grid; place-items: center;
+    }
+    .wrap {
+      width: min(1100px, 94vw);
+      background: var(--veil);
+      border-radius: 20px;
+      padding: clamp(14px, 3vw, 28px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      backdrop-filter: blur(2px);
+    }
+    h1 { margin: 0 0 8px 0; font-weight: 800; letter-spacing:.2px; }
+    .subtitle { color:#444; margin-bottom: 14px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 740px)  { .grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .q { margin: 12px 0 18px; }
+    .q-label { font-weight: 700; margin-bottom: 8px; }
+    .choice {
+      display:flex; align-items:center; justify-content:center;
+      gap:8px; padding:12px 10px; background:#fff; border:2px solid #ddd;
+      border-radius: 14px; cursor: pointer; user-select:none; text-align:center;
+      min-height:64px;
+    }
+    .choice input { display:none; }
+    .choice[data-score="5"].active { border-color: var(--good); box-shadow: 0 0 0 3px rgba(22,163,74,.15) inset; }
+    .choice[data-score="4"].active { border-color: #22c55e; }
+    .choice[data-score="3"].active { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(234,179,8,.15) inset; }
+    .choice[data-score="2"].active,
+    .choice[data-score="1"].active { border-color: var(--bad); box-shadow: 0 0 0 3px rgba(220,38,38,.12) inset; }
+    .emoji { font-size: 26px; }
+    .label { font-weight: 700; }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    }
+    .card h3 { margin: 0 0 8px 0; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+    input[type=text], textarea {
+      width:100%; padding:12px 12px; border:1.6px solid #ddd; border-radius:12px; font-size:16px; background:#fff;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .ck { display: flex; align-items: flex-start; gap: 10px; }
+    .ck input { margin-top: 4px; }
+
+    .actions { display:flex; gap:12px; margin-top:16px; align-items:center; }
+    .btn {
+      background: var(--accent); color:#fff; border:0; border-radius:14px;
+      padding: 14px 18px; font-weight:800; font-size: 18px; cursor:pointer;
+    }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .muted { color:#666; font-size: 14px; }
+
+    .thanks {
+      position: fixed; inset:0; display:none; place-items:center; background: rgba(0,0,0,.66);
+    }
+    .thanks .inner {
+      background:#fff; padding:24px; border-radius:18px; text-align:center; width:min(480px, 92vw);
+      box-shadow:0 16px 50px rgba(0,0,0,.4);
+    }
+    .footer { margin-top: 8px; color:#444; font-size:14px; text-align:center; }
+
+    /* Small online/offline pill */
+    #netbadge { position:fixed; right:12px; bottom:12px; background:#0a7d24; color:#fff;
+      padding:6px 10px; border-radius:999px; font:12px system-ui; opacity:.95; z-index:9999 }
+  </style>
 </head>
 <body>
-  <div class="veil">
-    <div class="container">
-      <h1>Chicken Licken — Quick Service Feedback</h1>
-      <p class="lead">Please answer all questions. Optional details are at the bottom.</p>
+  <div class="hero">
+    <div class="wrap">
+      <h1>Quick Service Feedback</h1>
+      <div class="subtitle">Please tap one answer per question.</div>
 
       <!-- QUESTIONS -->
       <div id="questions"></div>
 
-      <!-- OPTIONAL DETAILS (contained within the card) -->
-      <div class="card" id="detailsCard">
+      <!-- OPTIONAL DETAILS -->
+      <div class="card" style="margin-top:16px;">
         <h3>Optional details</h3>
-        <div class="consent">
-          <input type="checkbox" id="consent" />
-          <div class="text">
-            <strong>POPIA Consent</strong><br/>
-            I understand that by providing my personal information, I consent to it being collected and processed by Chicken Licken for customer service and quality feedback purposes, in accordance with the Protection of Personal Information Act (POPIA). My information will not be shared with third parties and may be deleted upon request.
-          </div>
+        <div class="row">
+          <input id="name" type="text" placeholder="Name (optional)" />
+          <input id="surname" type="text" placeholder="Surname (optional)" />
         </div>
-        <label for="custName">Name</label>
-        <input id="custName" placeholder="Name" />
-        <label for="custSurname">Surname</label>
-        <input id="custSurname" placeholder="Surname" />
-        <label for="custPhone">Phone number</label>
-        <input id="custPhone" placeholder="+27 …" inputmode="tel" />
-        <label for="custFeedback">Additional feedback (optional)</label>
-        <textarea id="custFeedback" placeholder="Tell us more (you may stay anonymous)"></textarea>
-        <div id="consentWarn" class="warn">Please confirm POPIA consent before submitting personal information.</div>
+        <div class="row" style="margin-top:10px;">
+          <input id="phone" type="text" placeholder="Phone (optional)" />
+          <textarea id="feedback" placeholder="Additional feedback (optional)"></textarea>
+        </div>
+        <div class="ck" style="margin-top:10px;">
+          <input id="popia" type="checkbox" />
+          <label for="popia">
+            I consent to the collection and processing of my personal information for customer service and quality feedback purposes, in accordance with the POPIA.
+          </label>
+        </div>
+        <div class="muted" style="margin-top:6px">
+          You don’t need to share personal details. If you do, ticking consent is required.
+        </div>
       </div>
 
+      <!-- ACTIONS -->
       <div class="actions">
-        <button id="submitBtn" class="submitBtn" disabled>Submit</button>
+        <button id="submitBtn" class="btn" disabled>Submit</button>
+        <div class="muted" id="statusTxt"></div>
       </div>
 
-      <div class="footer" id="footer">CL-PRETORIA-001 • Front Counter</div>
+      <div class="footer" id="footer"></div>
     </div>
   </div>
 
-  <div class="thanks" id="thanks"><div class="box">
-    <h2>Thank you! 🎉</h2>
-    <p>Your feedback has been recorded.</p>
-  </div></div>
+  <!-- Thank you overlay -->
+  <div class="thanks" id="thanks">
+    <div class="inner">
+      <h2>Thank you!</h2>
+      <p>Your feedback has been recorded.</p>
+      <button class="btn" id="againBtn">Done</button>
+    </div>
+  </div>
 
-<script>
-  // Config (overridden by config.json when hosted over http/https)
-  const CFG = { apiUrl: "https://script.google.com/macros/s/AKfycbzQhYlYL49anIBFrSLLTDigkf_4cZ0hW3z2zANRMVJ3jcEnLBwN3G48PhhW-H9BMK6S_A/exec", storeId: "CL-PRETORIA-001", deviceLabel: "Front Counter", deviceId: "" };
+  <div id="netbadge">Online</div>
 
-  const QUESTIONS = [
-    { id: "Q1", text: "Speed of service at the counter" },
-    { id: "Q2", text: "Friendliness of the staff" },
-    { id: "Q3", text: "Order accuracy (what you received vs ordered)" },
-    { id: "Q4", text: "Food temperature and freshness" },
-    { id: "Q5", text: "Restaurant cleanliness (counter & seating)" }
-  ];
+  <script>
+  // ========= 1) SAFE DEFAULT CONFIG (put your /exec URL here!) =========
+  const CFG = {
+    apiUrl: "https://script.google.com/macros/s/AKfycbzQhYlYL49anIBFrSLLTDigkf_4cZ0hW3z2zANRMVJ3jcEnLBwN3G48PhhW-H9BMK6S_A/exec", // <-- CHANGE THIS
+    storeId: "CL-PRETORIA-001",
+    deviceLabel: "Front Counter",
+    deviceId: ""
+  };
+  </script>
 
-  const CHOICES = [
-    { label: "Excellent", emoji: "😄", score: 5, cls: "excellent" },
-    { label: "Good",      emoji: "🙂", score: 4, cls: "good" },
-    { label: "Average",   emoji: "😐", score: 3, cls: "average" },
-    { label: "Poor",      emoji: "🙁", score: 2, cls: "poor" },
-    { label: "Bad",       emoji: "😡", score: 1, cls: "bad" }
-  ];
+  <!-- ========= 2) Offline Queue (IndexedDB + localStorage) ========= -->
+  <script>
+  const OfflineQueue = (function(){
+    const DB_NAME = 'cl-feedback-db';
+    const STORE = 'pending';
+    const LS_KEY = 'cl_feedback_pending_v1';
+    let dbPromise = null;
 
-  const answers = new Map(); // questionId -> {score,label,choice}
+    function openDB() {
+      if (!('indexedDB' in window)) return Promise.resolve(null);
+      if (dbPromise) return dbPromise;
+      dbPromise = new Promise((resolve) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null); // fallback later
+      });
+      return dbPromise;
+    }
+    async function add(item) {
+      const db = await openDB();
+      if (!db) {
+        const arr = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+        if (item._tmpId == null) item._tmpId = Date.now() + Math.random();
+        arr.push(item);
+        localStorage.setItem(LS_KEY, JSON.stringify(arr));
+        return;
+      }
+      await new Promise((res, rej) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).add(item);
+        tx.oncomplete = () => res();
+        tx.onerror = () => rej(tx.error);
+      });
+    }
+    async function getAll() {
+      const db = await openDB();
+      if (!db) return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      return await new Promise((res, rej) => {
+        const tx = db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).getAll();
+        req.onsuccess = () => res(req.result || []);
+        req.onerror = () => rej(req.error);
+      });
+    }
+    async function clearAll() {
+      const db = await openDB();
+      if (!db) { localStorage.removeItem(LS_KEY); return; }
+      await new Promise((res, rej) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).clear();
+        tx.oncomplete = () => res();
+        tx.onerror = () => rej(tx.error);
+      });
+    }
+    return { add, getAll, clearAll };
+  })();
+  </script>
 
-  function updateSubmitState() {
-    const submit = document.getElementById('submitBtn');
-    const allAnswered = (answers.size === QUESTIONS.length);
-    submit.disabled = !allAnswered;
-    submit.classList.toggle('enabled', allAnswered);
-    submit.style.cursor = allAnswered ? 'pointer' : 'not-allowed';
+  <!-- ========= 3) Helper: sendNow + auto-flush ========= -->
+  <script>
+  function showToast(msg){
+    const s = document.getElementById('statusTxt');
+    s.textContent = msg;
+    clearTimeout(s._t);
+    s._t = setTimeout(() => s.textContent = '', 3000);
+  }
+  async function sendNow(q) {
+    const r = await fetch(q.apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(q.body)
+    });
+    const txt = await r.text();
+    if (!r.ok || !/\"ok\"\s*:\s*true/.test(txt)) {
+      throw new Error('Server error: ' + r.status + ' ' + txt);
+    }
+  }
+  async function flushQueue() {
+    const items = await OfflineQueue.getAll();
+    if (!items.length) return;
+    try {
+      for (const it of items) await sendNow(it);
+      await OfflineQueue.clearAll();
+      showToast('Synced ' + items.length + ' pending ✅');
+    } catch (e) {
+      // keep items; will retry later
+    }
+  }
+  function updateBadge(){
+    const b = document.getElementById('netbadge');
+    if (!b) return;
+    if (navigator.onLine) { b.textContent='Online'; b.style.background='#0a7d24'; }
+    else { b.textContent='Offline (queued)'; b.style.background='#a33'; }
+  }
+  window.addEventListener('online', () => { updateBadge(); flushQueue(); });
+  window.addEventListener('offline', updateBadge);
+  window.addEventListener('visibilitychange', () => { if (!document.hidden && navigator.onLine) flushQueue();});
+  window.addEventListener('load', () => { updateBadge(); if (navigator.onLine) flushQueue(); });
+  setInterval(() => { if (navigator.onLine) flushQueue(); }, 30000);
+  </script>
+
+  <!-- ========= 4) UI + Logic ========= -->
+  <script>
+  // Re-enable service worker + safe config loader (won't overwrite apiUrl)
+  if (location.protocol.startsWith('http')) {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    (async () => {
+      try {
+        const r = await fetch('./config.json?_=' + Date.now());
+        if (r.ok) {
+          const cfg = await r.json();
+          if (cfg.storeId)     CFG.storeId = cfg.storeId;
+          if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
+          if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
+          // Intentionally do NOT overwrite CFG.apiUrl here
+        }
+      } catch {}
+      const f = document.getElementById('footer');
+      if (f) f.textContent = (CFG.storeId || '') + ' • ' + (CFG.deviceLabel || '');
+    })();
   }
 
-  function render() {
-    const root = document.getElementById('questions');
-    root.innerHTML = '';
+  const QUESTIONS = [
+    { id:'Q1', text:'Speed of service' },
+    { id:'Q2', text:'Friendliness of staff' },
+    { id:'Q3', text:'Order accuracy' },
+    { id:'Q4', text:'Cleanliness of store' },
+    { id:'Q5', text:'Overall experience' }
+  ];
+  const CHOICES = [
+    { label:'😄 Excellent', score:5 },
+    { label:'🙂 Good',      score:4 },
+    { label:'😐 Average',   score:3 },
+    { label:'🙁 Poor',      score:2 },
+    { label:'😡 Bad',       score:1 }
+  ];
+
+  const qWrap = document.getElementById('questions');
+
+  function renderQuestions() {
+    qWrap.innerHTML = '';
     QUESTIONS.forEach(q => {
       const el = document.createElement('div');
       el.className = 'q';
-      const btns = CHOICES.map(c => (
-        `<button class="option ${c.cls}" data-score="${c.score}" data-qid="${q.id}" data-label="${c.label}">
-          ${c.emoji} ${c.label}
-        </button>`
-      )).join('');
-      el.innerHTML = `<h3>${q.text}</h3><div class="btns">${btns}</div>`;
-      root.appendChild(el);
+      el.innerHTML = `
+        <div class="q-label">${q.text}</div>
+        <div class="grid" data-qid="${q.id}">
+          ${CHOICES.map((c,i)=>`
+            <label class="choice" data-score="${c.score}">
+              <input type="radio" name="${q.id}" value="${c.score}">
+              <span class="emoji">${c.label.split(' ')[0]}</span>
+              <span class="label">${c.label.split(' ').slice(1).join(' ')}</span>
+            </label>
+          `).join('')}
+        </div>
+      `;
+      qWrap.appendChild(el);
     });
-
-    document.querySelectorAll('.btns').forEach(group => {
-      group.addEventListener('click', (e) => {
-        const btn = e.target.closest('button.option'); if (!btn) return;
-        // Clear previous selection
-        group.querySelectorAll('button.option').forEach(b => b.classList.remove('selected'));
-        // Select new
-        btn.classList.add('selected');
-        const score = +btn.dataset.score;
-        const label = btn.dataset.label;
-        const choice = score >= 5 ? 'Green' : score >= 3 ? 'Yellow' : 'Red';
-        answers.set(btn.dataset.qid, { score, label, choice });
+    // activate selection styling
+    qWrap.querySelectorAll('.grid').forEach(grid => {
+      grid.addEventListener('click', (e) => {
+        const lab = e.target.closest('.choice');
+        if (!lab) return;
+        grid.querySelectorAll('.choice').forEach(x => x.classList.remove('active'));
+        lab.classList.add('active');
+        const inp = lab.querySelector('input');
+        if (inp) inp.checked = true;
         updateSubmitState();
       });
     });
-
-    updateSubmitState();
   }
 
-  function hasPersonalInfo() {
-    return !!(document.getElementById('custName').value.trim() ||
-              document.getElementById('custSurname').value.trim() ||
-              document.getElementById('custPhone').value.trim());
+  function allAnswered() {
+    return QUESTIONS.every(q => {
+      const checked = qWrap.querySelector(`input[name="${q.id}"]:checked`);
+      return !!checked;
+    });
   }
 
-  function showThanks() {
-    const el = document.getElementById('thanks');
-    el.style.display = 'flex';
-    setTimeout(() => { el.style.display = 'none'; }, 2400);
+  function needsPOPIA() {
+    return !!(document.getElementById('name').value.trim() ||
+              document.getElementById('surname').value.trim() ||
+              document.getElementById('phone').value.trim());
   }
 
-  function clearForm() {
-    document.getElementById('custName').value = '';
-    document.getElementById('custSurname').value = '';
-    document.getElementById('custPhone').value = '';
-    document.getElementById('custFeedback').value = '';
-    document.getElementById('consent').checked = false;
-    answers.clear();
-    document.querySelectorAll('.btns .option').forEach(b => b.classList.remove('selected'));
-    updateSubmitState();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function updateSubmitState() {
+    const ok = allAnswered() && (!needsPOPIA() || document.getElementById('popia').checked);
+    document.getElementById('submitBtn').disabled = !ok;
   }
 
-  async function send(apiUrl, payload) {
-    if (!apiUrl) throw new Error("No API URL configured");
-    const r = await fetch(CFG.apiUrl, {
-  method: "POST",
-  headers: { "Content-Type": "text/plain;charset=utf-8" },
-  body: JSON.stringify(payload)
-});
-    if (!r.ok) throw new Error("HTTP " + r.status);
-  }
+  document.addEventListener('input', (e) => {
+    if (['name','surname','phone','feedback','popia'].includes(e.target.id)) updateSubmitState();
+  });
+
+  renderQuestions();
+  updateSubmitState();
 
   document.getElementById('submitBtn').addEventListener('click', async () => {
-    const allAnswered = (answers.size === QUESTIONS.length);
-    if (!allAnswered) return;
+    if (!allAnswered()) { showToast('Please answer all questions'); return; }
+    if (needsPOPIA() && !document.getElementById('popia').checked) {
+      showToast('Please tick POPIA consent if you provide personal details'); return;
+    }
 
-    const consent = document.getElementById('consent').checked;
-    const warn = document.getElementById('consentWarn');
-    if (hasPersonalInfo() && !consent) { warn.style.display = 'block'; return; } else { warn.style.display = 'none'; }
+    const answers = QUESTIONS.map(q => {
+      const score = Number(qWrap.querySelector(`input[name="${q.id}"]:checked`).value);
+      const choice = CHOICES.find(c => c.score === score);
+      return { questionId: q.id, choiceLabel: choice.label, choiceScore: score };
+    });
 
     const payload = {
       storeId: CFG.storeId,
-      deviceId: CFG.deviceId || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)),
       deviceLabel: CFG.deviceLabel,
+      deviceId: CFG.deviceId || '',
       pressedAtUtc: new Date().toISOString(),
-      answers: Array.from(answers, ([questionId, v]) => ({ questionId, choice: v.choice, choiceScore: v.score, choiceLabel: v.label })),
+      answers,
       customer: {
-        name: document.getElementById('custName').value.trim() || null,
-        surname: document.getElementById('custSurname').value.trim() || null,
-        phone: document.getElementById('custPhone').value.trim() || null,
-        feedback: document.getElementById('custFeedback').value.trim() || null,
-        consent: hasPersonalInfo() ? !!document.getElementById('consent').checked : null
+        name: document.getElementById('name').value.trim(),
+        surname: document.getElementById('surname').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        feedback: document.getElementById('feedback').value.trim(),
+        consent: document.getElementById('popia').checked || null
       }
     };
 
-    try { await send(CFG.apiUrl, payload); showThanks(); clearForm(); }
-    catch (e) {
-      const key = "feedback_queue_pwa_v1";
-      const q = JSON.parse(localStorage.getItem(key) || "[]");
-      q.push(payload);
-      localStorage.setItem(key, JSON.stringify(q));
-      showThanks(); clearForm();
+    // Queue first, then try to send now
+    const queued = { apiUrl: CFG.apiUrl, body: payload, queuedAt: new Date().toISOString() };
+    await OfflineQueue.add(queued);
+    try {
+      await sendNow(queued);
+      await OfflineQueue.clearAll(); // this payload was sent; clear buffer just in case
+      document.getElementById('thanks').style.display='grid';
+    } catch (e) {
+      showToast('Saved offline — will auto-sync ✅');
+      document.getElementById('thanks').style.display='grid';
     }
+
+    // Reset form for next user
+    setTimeout(() => {
+      document.querySelectorAll('input[type=radio]').forEach(i => i.checked=false);
+      document.querySelectorAll('.choice').forEach(x => x.classList.remove('active'));
+      ['name','surname','phone','feedback'].forEach(id => document.getElementById(id).value='');
+      document.getElementById('popia').checked = false;
+      updateSubmitState();
+    }, 50);
   });
 
-  // PWA: service worker + config.json override (only on http/https)
-if (location.protocol.startsWith('http')) {
-  // (Re)register service worker
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
-
-  // Load config.json to override ONLY store fields (not apiUrl)
-  (async () => {
-    try {
-      const r = await fetch('./config.json?_=' + Date.now()); // cache-bust
-      if (r.ok) {
-        const cfg = await r.json();
-        // Only merge store info — do NOT touch apiUrl here
-        if (cfg.storeId)     CFG.storeId = cfg.storeId;
-        if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
-        if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
-      }
-    } catch (e) {
-      console.warn('config.json load skipped:', e);
-    }
-    // Optional footer/debug
-    const f = document.getElementById('footer');
-    if (f) f.textContent = (CFG.storeId || '') + ' • ' + (CFG.deviceLabel || '');
-  })();
-}
-  // Initial render
-  render();
-</script>
+  document.getElementById('againBtn').addEventListener('click', () => {
+    document.getElementById('thanks').style.display='none';
+  });
+  </script>
 </body>
 </html>
