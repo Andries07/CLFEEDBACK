@@ -1,5 +1,5 @@
-// bump this when you change files
-const CACHE = 'kiosk-final-v1';
+// bump this name whenever you change files
+const CACHE = 'kiosk-stopdupes-v1';
 const ASSETS = [
   './',
   './index.html',
@@ -21,7 +21,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET') return; // don't intercept POSTs
+  if (req.method !== 'GET') return; // never intercept POSTs
   e.respondWith(
     caches.match(req).then(res => res || fetch(req).then(net => {
       const copy = net.clone();
