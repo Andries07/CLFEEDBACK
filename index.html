@@ -51,8 +51,10 @@
       <h1>Quick Service Feedback</h1>
       <div class="subtitle">Please tap one answer per question.</div>
 
+      <!-- QUESTIONS will be injected here -->
       <div id="questions"></div>
 
+      <!-- OPTIONAL DETAILS -->
       <div class="card" style="margin-top:16px">
         <h3>Optional details</h3>
         <div class="row">
@@ -92,31 +94,15 @@
 <script>
 /* =================  CONFIG  ================= */
 const CFG = {
-  apiUrl: "https://script.google.com/macros/s/AKfycbywZY0LJCGLN075IlHAIR_SwjbjReGa_N7XMk3hkUO5MTBJgNT2EXPUJzlHJfMI02E-MA/exec
-  ", // <-- CHANGE THIS
+  apiUrl: "https://script.google.com/macros/s/AKfycbywZY0LJCGLN075IlHAIR_SwjbjReGa_N7XMk3hkUO5MTBJgNT2EXPUJzlHJfMI02E-MA/exec", // <-- CHANGE THIS
   storeId: "CL-PRETORIA-001",
   deviceLabel: "Front Counter",
   deviceId: ""
 };
-// optional dynamic config (won’t overwrite apiUrl)
-if (location.protocol.startsWith('http')) {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
-  (async()=>{
-    try{
-      const r = await fetch('./config.json?_=' + Date.now());
-      if (r.ok){
-        const cfg = await r.json();
-        if (cfg.storeId)     CFG.storeId = cfg.storeId;
-        if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
-        if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
-      }
-    }catch{}
-    const f = document.getElementById('footer');
-    if (f) f.textContent = (CFG.storeId||'') + ' • ' + (CFG.deviceLabel||'');
-  })();
-}
+</script>
 
-/* ==============  OFFLINE QUEUE v3  (idempotent)  ============== */
+<script>
+/* ==============  OFFLINE QUEUE (idempotent)  ============== */
 const OfflineQueue = (function(){
   const DB_NAME='cl-feedback-db'; const STORE='pending'; const LS='cl_feedback_pending_v3';
   let dbp=null;
@@ -141,7 +127,7 @@ const OfflineQueue = (function(){
   return { add, all, remove };
 })();
 
-/* ==============  SENDER + FLUSH (idempotent)  ============== */
+/* ==============  SENDER + FLUSH (accepts duplicate:true)  ============== */
 function showToast(msg){
   const el = document.getElementById('statusTxt'); el.textContent = msg;
   clearTimeout(el._t); el._t=setTimeout(()=>el.textContent='',2500);
@@ -153,7 +139,6 @@ async function sendNow(q){
     body: JSON.stringify(q.body)
   });
   const txt = await r.text();
-  // Accept ok:true OR duplicate:true from server
   if (!r.ok || !/\"(ok|duplicate)\"\s*:\s*(true|\"true\")/.test(txt)) {
     throw new Error('Server '+r.status+' '+txt);
   }
@@ -163,12 +148,8 @@ async function flushQueue(){
   const items = await OfflineQueue.all();
   if (!items.length) return;
   for (const it of items){
-    try {
-      await sendNow(it);
-      await OfflineQueue.remove(it.id ?? null, it._tmpId ?? null); // remove only this one
-    } catch(e){
-      break; // stop; keep remainder queued
-    }
+    try { await sendNow(it); await OfflineQueue.remove(it.id ?? null, it._tmpId ?? null); }
+    catch(e){ break; }
   }
 }
 function updateBadge(){
@@ -176,13 +157,8 @@ function updateBadge(){
   if(navigator.onLine){ b.textContent='Online'; b.style.background='#0a7d24'; }
   else { b.textContent='Offline (queued)'; b.style.background='#a33'; }
 }
-window.addEventListener('online',()=>{updateBadge();flushQueue();});
-window.addEventListener('offline',updateBadge);
-window.addEventListener('visibilitychange',()=>{ if(!document.hidden&&navigator.onLine) flushQueue(); });
-window.addEventListener('load',()=>{ updateBadge(); if(navigator.onLine) flushQueue(); });
-setInterval(()=>{ if(navigator.onLine) flushQueue(); }, 30000);
 
-/* ==================  UI & SUBMIT  ================== */
+/* ==================  QUESTIONS & SUBMIT  ================== */
 const QUESTIONS=[
   {id:'Q1',text:'Speed of service'},
   {id:'Q2',text:'Friendliness of staff'},
@@ -197,9 +173,9 @@ const CHOICES=[
   {label:'🙁 Poor',     score:2},
   {label:'😡 Bad',      score:1}
 ];
-const qWrap=document.getElementById('questions');
 
 function renderQuestions(){
+  const qWrap=document.getElementById('questions');
   qWrap.innerHTML='';
   QUESTIONS.forEach(q=>{
     const el=document.createElement('div'); el.className='q';
@@ -227,7 +203,7 @@ function renderQuestions(){
   });
 }
 function allAnswered(){
-  return QUESTIONS.every(q => !!qWrap.querySelector(`input[name="${q.id}"]:checked`));
+  return QUESTIONS.every(q => !!document.querySelector(`input[name="${q.id}"]:checked`));
 }
 function needsPOPIA(){
   return !!(document.getElementById('name').value.trim()||
@@ -238,27 +214,19 @@ function updateSubmitState(){
   const ok = allAnswered() && (!needsPOPIA() || document.getElementById('popia').checked);
   document.getElementById('submitBtn').disabled = !ok;
 }
-document.addEventListener('input',e=>{
-  if(['name','surname','phone','feedback','popia'].includes(e.target.id)) updateSubmitState();
-});
-renderQuestions(); updateSubmitState();
-
-document.getElementById('submitBtn').addEventListener('click', async ()=>{
+async function onSubmit(){
   if(!allAnswered()){ showToast('Please answer all questions'); return; }
   if(needsPOPIA() && !document.getElementById('popia').checked){
     showToast('Please tick POPIA consent if you provide personal details'); return;
   }
   const answers = QUESTIONS.map(q=>{
-    const score=Number(qWrap.querySelector(`input[name="${q.id}"]:checked`).value);
+    const score=Number(document.querySelector(`input[name="${q.id}"]:checked`).value);
     const choice=CHOICES.find(c=>c.score===score);
     return {questionId:q.id,choiceLabel:choice.label,choiceScore:score};
   });
   const payload = {
-    // create an idempotency key included in payload for server dedupe
     clientId: `${Date.now()}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(16)}`,
-    storeId: CFG.storeId,
-    deviceLabel: CFG.deviceLabel,
-    deviceId: CFG.deviceId || '',
+    storeId: CFG.storeId, deviceLabel: CFG.deviceLabel, deviceId: CFG.deviceId || '',
     pressedAtUtc: new Date().toISOString(),
     answers,
     customer:{
@@ -269,20 +237,10 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
       consent: document.getElementById('popia').checked || null
     }
   };
-
-  // queue then try send
   const item = { apiUrl: CFG.apiUrl, body: payload, queuedAt: new Date().toISOString() };
   const ref = await OfflineQueue.add(item);
-  try{
-    await sendNow(item);
-    await OfflineQueue.remove(ref.key ?? null, ref.tmp ?? null);
-    document.getElementById('thanks').style.display='grid';
-  }catch(e){
-    showToast('Saved offline — will auto-sync ⏳');
-    document.getElementById('thanks').style.display='grid';
-  }
-
-  // reset UI (but do NOT clear queue; only the sent item was removed)
+  try{ await sendNow(item); await OfflineQueue.remove(ref.key ?? null, ref.tmp ?? null); document.getElementById('thanks').style.display='grid'; }
+  catch(e){ showToast('Saved offline — will auto-sync ⏳'); document.getElementById('thanks').style.display='grid'; }
   setTimeout(()=>{
     document.querySelectorAll('input[type=radio]').forEach(i=>i.checked=false);
     document.querySelectorAll('.choice').forEach(x=>x.classList.remove('active'));
@@ -290,8 +248,40 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
     document.getElementById('popia').checked=false;
     updateSubmitState();
   },50);
-});
-document.getElementById('againBtn').addEventListener('click',()=>{ document.getElementById('thanks').style.display='none'; });
+}
+
+/* ==================  INIT (runs after DOM ready)  ================== */
+function init(){
+  // service worker + safe config (won’t overwrite apiUrl)
+  if (location.protocol.startsWith('http')){
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    (async()=>{
+      try{
+        const r=await fetch('./config.json?_=' + Date.now());
+        if (r.ok){
+          const cfg=await r.json();
+          if (cfg.storeId)     CFG.storeId = cfg.storeId;
+          if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
+          if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
+        }
+      }catch{}
+      const f=document.getElementById('footer');
+      if (f) f.textContent=(CFG.storeId||'')+' • '+(CFG.deviceLabel||'');
+    })();
+  }
+  renderQuestions();
+  updateSubmitState();
+  document.addEventListener('input',e=>{ if(['name','surname','phone','feedback','popia'].includes(e.target.id)) updateSubmitState(); });
+  document.getElementById('submitBtn').addEventListener('click', onSubmit);
+  document.getElementById('againBtn').addEventListener('click',()=>{ document.getElementById('thanks').style.display='none'; });
+  updateBadge();
+  if (navigator.onLine) flushQueue();
+  window.addEventListener('online', ()=>{ updateBadge(); flushQueue(); });
+  window.addEventListener('offline', updateBadge);
+  window.addEventListener('visibilitychange', ()=>{ if(!document.hidden && navigator.onLine) flushQueue(); });
+  setInterval(()=>{ if(navigator.onLine) flushQueue(); }, 30000);
+}
+window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
