@@ -241,7 +241,7 @@
   });
 
   // PWA: service worker + config.json override (only on http/https)
-  if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
+/*  if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
     (async () => {
       try {
@@ -255,7 +255,7 @@
       } catch (e) {}
     })();
   }
-
+*/
   // Initial render
   render();
 </script>
