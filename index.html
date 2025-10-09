@@ -9,7 +9,8 @@
 <style>
   :root{
     --veil: rgba(255,255,255,.92);
-    --accent:#f97316; --green:#16a34a; --green2:#22c55e; --yellow:#eab308; --orange:#f97316; --red:#dc2626;
+    --accent:#f97316;
+    --green:#16a34a; --green2:#22c55e; --yellow:#eab308; --orange:#f97316; --red:#dc2626;
   }
   html,body{margin:0;background:#000;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
   .hero{min-height:100dvh;background:url('./background.jpg') center/cover no-repeat fixed;display:grid;place-items:center}
@@ -22,17 +23,9 @@
   @media (max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
   @media (max-width:740px){.grid{grid-template-columns:repeat(2,1fr)}}
 
-  .choice{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 12px;border:2px solid transparent;border-radius:14px;cursor:pointer;min-height:64px;text-align:center;color:#fff;font-weight:700}
+  .choice{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 12px;border:2px solid transparent;border-radius:14px;cursor:pointer;min-height:64px;text-align:center;font-weight:800}
   .choice input{display:none}
-
-  /* COLORED BUTTONS */
-  .choice[data-score="5"]{background:var(--green)}
-  .choice[data-score="4"]{background:var(--green2)}
-  .choice[data-score="3"]{background:var(--yellow); color:#111}
-  .choice[data-score="2"]{background:var(--orange)}
-  .choice[data-score="1"]{background:var(--red)}
-
-  .choice.active{outline:3px solid rgba(255,255,255,.8)}
+  .choice.active{outline:3px solid rgba(255,255,255,.85)}
 
   .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -99,92 +92,165 @@
 <script>
 /* =================  CONFIG  ================= */
 const CFG = {
-  apiUrl: "https://script.google.com/macros/s/AKfycbw4DcDMNEriWnRWA9GD7TtMVX5gC4Uuhrw-lW2gHOvqDpd4-XByeaf-Fa4iwd3uWoqggg/exec", // <-- CHANGE THIS
+  apiUrl: "https://script.google.com/macros/s/PASTE_YOUR_EXEC_ID/exec", // <-- PUT YOUR /exec URL HERE
   storeId: "CL-PRETORIA-001",
   deviceLabel: "Front Counter",
   deviceId: ""
 };
-// safe dynamic config (won’t overwrite apiUrl)
-if (location.protocol.startsWith('http')) {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
-  (async()=>{
-    try{
-      const r = await fetch('./config.json?_=' + Date.now());
-      if (r.ok){
-        const cfg = await r.json();
-        if (cfg.storeId)     CFG.storeId = cfg.storeId;
-        if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
-        if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
-      }
-    }catch{}
-    const f = document.getElementById('footer');
-    if (f) f.textContent = (CFG.storeId||'') + ' • ' + (CFG.deviceLabel||'');
-  })();
-}
+</script>
 
-/* ====== OFFLINE QUEUE (IndexedDB + LS fallback) with version purge ====== */
-const QUEUE_VERSION = 'v4'; // bump to wipe any old buggy queue once
+<script>
+/* ====== OFFLINE QUEUE (IndexedDB + LS) with one-time purge & local dedupe ====== */
+const QUEUE_VERSION = 'v5';       // bump once to wipe any old stuck queue
+const SENT_IDS_KEY  = 'cl_sent_ids_v1'; // local dedupe even if server isn’t updated yet
 (function(){
-  const key='cl_queue_version';
-  const cur=localStorage.getItem(key);
-  if (cur !== QUEUE_VERSION) {
+  const verKey='cl_queue_version';
+  if (localStorage.getItem(verKey) !== QUEUE_VERSION) {
+    localStorage.removeItem('cl_feedback_pending_v4');
     localStorage.removeItem('cl_feedback_pending_v3');
     localStorage.removeItem('cl_feedback_pending_v2');
     localStorage.removeItem('cl_feedback_pending_v1');
-    localStorage.setItem(key, QUEUE_VERSION);
+    localStorage.setItem(verKey, QUEUE_VERSION);
   }
+  if (!localStorage.getItem(SENT_IDS_KEY)) localStorage.setItem(SENT_IDS_KEY, JSON.stringify([]));
 })();
+function wasSent(clientId){
+  try {
+    const arr = JSON.parse(localStorage.getItem(SENT_IDS_KEY)||'[]');
+    return arr.includes(clientId);
+  } catch { return false; }
+}
+function markSent(clientId){
+  try {
+    const arr = JSON.parse(localStorage.getItem(SENT_IDS_KEY)||'[]');
+    arr.push(clientId);
+    // keep last 1000
+    while (arr.length > 1000) arr.shift();
+    localStorage.setItem(SENT_IDS_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
 const OfflineQueue = (function(){
-  const DB_NAME='cl-feedback-db'; const STORE='pending'; const LS='cl_feedback_pending_v4';
+  const DB_NAME='cl-feedback-db'; const STORE='pending'; const LS='cl_feedback_pending_v5';
   let dbp=null;
   function openDB(){
     if(!('indexedDB' in window)) return Promise.resolve(null);
     if(dbp) return dbp;
-    dbp=new Promise((res)=>{ const req=indexedDB.open(DB_NAME,4);
+    dbp=new Promise((res)=>{ const req=indexedDB.open(DB_NAME,5);
       req.onupgradeneeded=()=>{ const db=req.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); };
       req.onsuccess=()=>res(req.result); req.onerror=()=>res(null);
     }); return dbp;
   }
-  async function add(item){ item.clientId=item.clientId||(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    const db=await openDB(); if(!db){ const arr=JSON.parse(localStorage.getItem(LS)||'[]'); const _tmpId=Date.now()+Math.random(); arr.push({...item,_tmpId}); localStorage.setItem(LS,JSON.stringify(arr)); return {key:null,tmp:_tmpId}; }
-    return await new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); const st=tx.objectStore(STORE); const rq=st.add(item); rq.onsuccess=()=>res({key:rq.result,tmp:null}); rq.onerror=()=>rej(rq.error); });
+  async function add(item){
+    item.clientId = item.clientId || (`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const db=await openDB();
+    if(!db){
+      const arr=JSON.parse(localStorage.getItem(LS)||'[]');
+      const _tmpId=Date.now()+Math.random();
+      arr.push({...item,_tmpId});
+      localStorage.setItem(LS,JSON.stringify(arr));
+      return {key:null,tmp:_tmpId};
+    }
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      const st=tx.objectStore(STORE);
+      const rq=st.add(item);
+      rq.onsuccess=()=>res({key:rq.result,tmp:null});
+      rq.onerror =()=>rej(rq.error);
+    });
   }
-  async function all(){ const db=await openDB(); if(!db) return JSON.parse(localStorage.getItem(LS)||'[]');
-    return await new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); });
+  async function all(){
+    const db=await openDB();
+    if(!db) return JSON.parse(localStorage.getItem(LS)||'[]');
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(STORE,'readonly');
+      const rq=tx.objectStore(STORE).getAll();
+      rq.onsuccess=()=>res(rq.result||[]);
+      rq.onerror   =()=>rej(rq.error);
+    });
   }
-  async function remove(key,tmp){ const db=await openDB(); if(!db){ const arr=JSON.parse(localStorage.getItem(LS)||'[]'); const next=arr.filter(x=>x._tmpId!==tmp); localStorage.setItem(LS,JSON.stringify(next)); return; }
-    await new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+  async function remove(key,tmp){
+    const db=await openDB();
+    if(!db){
+      const arr=JSON.parse(localStorage.getItem(LS)||'[]');
+      const next=arr.filter(x=>x._tmpId!==tmp);
+      localStorage.setItem(LS,JSON.stringify(next));
+      return;
+    }
+    await new Promise((res,rej)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).delete(key);
+      tx.oncomplete=()=>res();
+      tx.onerror   =()=>rej(tx.error);
+    });
   }
-  return { add, all, remove };
+  async function clearAll(){
+    const db=await openDB();
+    if(!db){ localStorage.removeItem(LS); return; }
+    await new Promise((res,rej)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).clear();
+      tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+    });
+  }
+  return { add, all, remove, clearAll };
 })();
 
+// One-time hard purge of any stuck queue (do this deployment once)
+(async function hardPurgeOnce(){
+  const key='cl_purged_once_v5';
+  if (!localStorage.getItem(key)) {
+    await OfflineQueue.clearAll();
+    localStorage.setItem(key,'1');
+  }
+})();
+</script>
+
+<script>
 /* ====== SENDER + FLUSH (treat duplicate:true as success) ====== */
 function showToast(msg){
   const el=document.getElementById('statusTxt'); el.textContent=msg;
   clearTimeout(el._t); el._t=setTimeout(()=>el.textContent='',2500);
 }
 async function sendNow(q){
+  // local client-side dedupe: if we already sent this id, skip and succeed
+  if (q.body && q.body.clientId && wasSent(q.body.clientId)) return true;
+
   const r = await fetch(q.apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(q.body)
   });
   const txt = await r.text();
+  // success if ok:true OR duplicate:true
   if (!r.ok || !/\"(ok|duplicate)\"\s*:\s*(true|\"true\")/.test(txt)) {
     throw new Error('Server '+r.status+' '+txt);
   }
+  // mark sent locally
+  if (q.body && q.body.clientId) markSent(q.body.clientId);
   return true;
 }
 async function flushQueue(){
   const items = await OfflineQueue.all();
   if (!items.length) return;
   for (const it of items){
-    try { await sendNow(it); await OfflineQueue.remove(it.id ?? null, it._tmpId ?? null); }
-    catch(e){ break; }
+    try {
+      // if already marked sent locally, just drop it
+      if (it.body && it.body.clientId && wasSent(it.body.clientId)) {
+        await OfflineQueue.remove(it.id ?? null, it._tmpId ?? null);
+        continue;
+      }
+      await sendNow(it);
+      await OfflineQueue.remove(it.id ?? null, it._tmpId ?? null);
+    } catch(e){
+      break; // stop; keep remaining queued to retry later
+    }
   }
 }
+</script>
 
-/* ====== UI: questions (color buttons), required answers, POPIA ====== */
+<script>
+/* ====== UI: colour buttons, required answers, POPIA ====== */
 const QUESTIONS=[
   {id:'Q1',text:'Speed of service'},
   {id:'Q2',text:'Friendliness of staff'},
@@ -192,12 +258,12 @@ const QUESTIONS=[
   {id:'Q4',text:'Cleanliness of store'},
   {id:'Q5',text:'Overall experience'}
 ];
-const CHOICES=[ // no emojis in text (UI shows only color)
-  {text:'Excellent',score:5},
-  {text:'Good',     score:4},
-  {text:'Average',  score:3},
-  {text:'Poor',     score:2},
-  {text:'Bad',      score:1}
+const CHOICES=[
+  {text:'Excellent',score:5,color:'var(--green)',  fg:'#fff'},
+  {text:'Good',     score:4,color:'var(--green2)', fg:'#fff'},
+  {text:'Average',  score:3,color:'var(--yellow)', fg:'#111'},
+  {text:'Poor',     score:2,color:'var(--orange)', fg:'#fff'},
+  {text:'Bad',      score:1,color:'var(--red)',    fg:'#fff'}
 ];
 
 function renderQuestions(){
@@ -205,18 +271,28 @@ function renderQuestions(){
   qWrap.innerHTML='';
   QUESTIONS.forEach(q=>{
     const el=document.createElement('div'); el.className='q';
-    el.innerHTML=`
-      <div class="q-label">${q.text}</div>
-      <div class="grid" data-qid="${q.id}">
-        ${CHOICES.map(c=>`
-          <label class="choice" data-score="${c.score}">
-            <input type="radio" name="${q.id}" value="${c.score}">
-            <span class="label">${c.text}</span>
-          </label>
-        `).join('')}
-      </div>`;
-    qWrap.appendChild(el);
+    const grid = document.createElement('div');
+    grid.className='grid';
+    grid.dataset.qid = q.id;
+
+    CHOICES.forEach(c=>{
+      const lab = document.createElement('label');
+      lab.className = 'choice';
+      lab.dataset.score = String(c.score);
+      // inline colour so old CSS cannot override
+      lab.style.background = c.color;
+      lab.style.color = c.fg;
+      lab.innerHTML = `
+        <input type="radio" name="${q.id}" value="${c.score}">
+        <span class="label">${c.text}</span>
+      `;
+      grid.appendChild(lab);
+    });
+
+    const ql = document.createElement('div'); ql.className='q-label'; ql.textContent=q.text;
+    el.appendChild(ql); el.appendChild(grid); qWrap.appendChild(el);
   });
+
   qWrap.querySelectorAll('.grid').forEach(grid=>{
     grid.addEventListener('click',e=>{
       const lab = e.target.closest('.choice'); if(!lab) return;
@@ -227,6 +303,7 @@ function renderQuestions(){
     });
   });
 }
+
 function allAnswered(){
   return QUESTIONS.every(q => !!document.querySelector(`input[name="${q.id}"]:checked`));
 }
@@ -248,7 +325,7 @@ async function onSubmit(){
   const answers = QUESTIONS.map(q=>{
     const score=Number(document.querySelector(`input[name="${q.id}"]:checked`).value);
     const choice=CHOICES.find(c=>c.score===score);
-    return {questionId:q.id,choiceText:choice.text,choiceScore:score}; // send text (no emoji)
+    return {questionId:q.id,choiceText:choice.text,choiceScore:score}; // NO emojis
   });
   const payload = {
     clientId: `${Date.now()}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(16)}`,
@@ -264,11 +341,19 @@ async function onSubmit(){
     }
   };
 
+  // Queue then try to send
   const item = { apiUrl: CFG.apiUrl, body: payload, queuedAt: new Date().toISOString() };
   const ref = await OfflineQueue.add(item);
-  try{ await sendNow(item); await OfflineQueue.remove(ref.key ?? null, ref.tmp ?? null); document.getElementById('thanks').style.display='grid'; }
-  catch(e){ showToast('Saved offline — will auto-sync ⏳'); document.getElementById('thanks').style.display='grid'; }
+  try{
+    await sendNow(item);
+    await OfflineQueue.remove(ref.key ?? null, ref.tmp ?? null);
+    document.getElementById('thanks').style.display='grid';
+  }catch(e){
+    showToast('Saved offline — will auto-sync ⏳');
+    document.getElementById('thanks').style.display='grid';
+  }
 
+  // Reset UI
   setTimeout(()=>{
     document.querySelectorAll('input[type=radio]').forEach(i=>i.checked=false);
     document.querySelectorAll('.choice').forEach(x=>x.classList.remove('active'));
@@ -280,11 +365,13 @@ async function onSubmit(){
 
 /* ====== INIT ====== */
 function updateBadge(){
-  const b=document.getElementById('netbadge'); if(!b) return;
-  if(navigator.onLine){ b.textContent='Online'; b.style.background='#0a7d24'; }
+  const b=document.getElementById('netbadge');
+  if (!b) return;
+  if (navigator.onLine){ b.textContent='Online'; b.style.background='#0a7d24'; }
   else { b.textContent='Offline (queued)'; b.style.background='#a33'; }
 }
 function init(){
+  // Optional: dynamic config that WON'T overwrite apiUrl is already handled above
   renderQuestions();
   updateSubmitState();
   document.addEventListener('input',e=>{ if(['name','surname','phone','feedback','popia'].includes(e.target.id)) updateSubmitState(); });
