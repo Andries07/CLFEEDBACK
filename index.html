@@ -9,7 +9,7 @@
 <style>
   :root{
     --veil: rgba(255,255,255,.92);
-    --accent:#f97316; --good:#16a34a; --warn:#eab308; --bad:#dc2626;
+    --accent:#f97316; --green:#16a34a; --green2:#22c55e; --yellow:#eab308; --orange:#f97316; --red:#dc2626;
   }
   html,body{margin:0;background:#000;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
   .hero{min-height:100dvh;background:url('./background.jpg') center/cover no-repeat fixed;display:grid;place-items:center}
@@ -21,14 +21,19 @@
   .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
   @media (max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
   @media (max-width:740px){.grid{grid-template-columns:repeat(2,1fr)}}
-  .choice{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 10px;background:#fff;border:2px solid #ddd;border-radius:14px;cursor:pointer;min-height:64px;text-align:center}
+
+  .choice{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 12px;border:2px solid transparent;border-radius:14px;cursor:pointer;min-height:64px;text-align:center;color:#fff;font-weight:700}
   .choice input{display:none}
-  .choice[data-score="5"].active{border-color:var(--good);box-shadow:0 0 0 3px rgba(22,163,74,.15) inset}
-  .choice[data-score="4"].active{border-color:#22c55e}
-  .choice[data-score="3"].active{border-color:var(--warn);box-shadow:0 0 0 3px rgba(234,179,8,.15) inset}
-  .choice[data-score="2"].active,.choice[data-score="1"].active{border-color:var(--bad);box-shadow:0 0 0 3px rgba(220,38,38,.12) inset}
-  .emoji{font-size:26px}
-  .label{font-weight:700}
+
+  /* COLORED BUTTONS */
+  .choice[data-score="5"]{background:var(--green)}
+  .choice[data-score="4"]{background:var(--green2)}
+  .choice[data-score="3"]{background:var(--yellow); color:#111}
+  .choice[data-score="2"]{background:var(--orange)}
+  .choice[data-score="1"]{background:var(--red)}
+
+  .choice.active{outline:3px solid rgba(255,255,255,.8)}
+
   .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media (max-width:720px){.row{grid-template-columns:1fr}}
@@ -51,7 +56,7 @@
       <h1>Quick Service Feedback</h1>
       <div class="subtitle">Please tap one answer per question.</div>
 
-      <!-- QUESTIONS will be injected here -->
+      <!-- QUESTIONS -->
       <div id="questions"></div>
 
       <!-- OPTIONAL DETAILS -->
@@ -99,17 +104,43 @@ const CFG = {
   deviceLabel: "Front Counter",
   deviceId: ""
 };
-</script>
+// safe dynamic config (won’t overwrite apiUrl)
+if (location.protocol.startsWith('http')) {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+  (async()=>{
+    try{
+      const r = await fetch('./config.json?_=' + Date.now());
+      if (r.ok){
+        const cfg = await r.json();
+        if (cfg.storeId)     CFG.storeId = cfg.storeId;
+        if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
+        if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
+      }
+    }catch{}
+    const f = document.getElementById('footer');
+    if (f) f.textContent = (CFG.storeId||'') + ' • ' + (CFG.deviceLabel||'');
+  })();
+}
 
-<script>
-/* ==============  OFFLINE QUEUE (idempotent)  ============== */
+/* ====== OFFLINE QUEUE (IndexedDB + LS fallback) with version purge ====== */
+const QUEUE_VERSION = 'v4'; // bump to wipe any old buggy queue once
+(function(){
+  const key='cl_queue_version';
+  const cur=localStorage.getItem(key);
+  if (cur !== QUEUE_VERSION) {
+    localStorage.removeItem('cl_feedback_pending_v3');
+    localStorage.removeItem('cl_feedback_pending_v2');
+    localStorage.removeItem('cl_feedback_pending_v1');
+    localStorage.setItem(key, QUEUE_VERSION);
+  }
+})();
 const OfflineQueue = (function(){
-  const DB_NAME='cl-feedback-db'; const STORE='pending'; const LS='cl_feedback_pending_v3';
+  const DB_NAME='cl-feedback-db'; const STORE='pending'; const LS='cl_feedback_pending_v4';
   let dbp=null;
   function openDB(){
     if(!('indexedDB' in window)) return Promise.resolve(null);
     if(dbp) return dbp;
-    dbp=new Promise((res)=>{ const req=indexedDB.open(DB_NAME,3);
+    dbp=new Promise((res)=>{ const req=indexedDB.open(DB_NAME,4);
       req.onupgradeneeded=()=>{ const db=req.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); };
       req.onsuccess=()=>res(req.result); req.onerror=()=>res(null);
     }); return dbp;
@@ -127,9 +158,9 @@ const OfflineQueue = (function(){
   return { add, all, remove };
 })();
 
-/* ==============  SENDER + FLUSH (accepts duplicate:true)  ============== */
+/* ====== SENDER + FLUSH (treat duplicate:true as success) ====== */
 function showToast(msg){
-  const el = document.getElementById('statusTxt'); el.textContent = msg;
+  const el=document.getElementById('statusTxt'); el.textContent=msg;
   clearTimeout(el._t); el._t=setTimeout(()=>el.textContent='',2500);
 }
 async function sendNow(q){
@@ -152,13 +183,8 @@ async function flushQueue(){
     catch(e){ break; }
   }
 }
-function updateBadge(){
-  const b=document.getElementById('netbadge'); if(!b) return;
-  if(navigator.onLine){ b.textContent='Online'; b.style.background='#0a7d24'; }
-  else { b.textContent='Offline (queued)'; b.style.background='#a33'; }
-}
 
-/* ==================  QUESTIONS & SUBMIT  ================== */
+/* ====== UI: questions (color buttons), required answers, POPIA ====== */
 const QUESTIONS=[
   {id:'Q1',text:'Speed of service'},
   {id:'Q2',text:'Friendliness of staff'},
@@ -166,12 +192,12 @@ const QUESTIONS=[
   {id:'Q4',text:'Cleanliness of store'},
   {id:'Q5',text:'Overall experience'}
 ];
-const CHOICES=[
-  {label:'😄 Excellent',score:5},
-  {label:'🙂 Good',     score:4},
-  {label:'😐 Average',  score:3},
-  {label:'🙁 Poor',     score:2},
-  {label:'😡 Bad',      score:1}
+const CHOICES=[ // no emojis in text (UI shows only color)
+  {text:'Excellent',score:5},
+  {text:'Good',     score:4},
+  {text:'Average',  score:3},
+  {text:'Poor',     score:2},
+  {text:'Bad',      score:1}
 ];
 
 function renderQuestions(){
@@ -185,8 +211,7 @@ function renderQuestions(){
         ${CHOICES.map(c=>`
           <label class="choice" data-score="${c.score}">
             <input type="radio" name="${q.id}" value="${c.score}">
-            <span class="emoji">${c.label.split(' ')[0]}</span>
-            <span class="label">${c.label.split(' ').slice(1).join(' ')}</span>
+            <span class="label">${c.text}</span>
           </label>
         `).join('')}
       </div>`;
@@ -214,6 +239,7 @@ function updateSubmitState(){
   const ok = allAnswered() && (!needsPOPIA() || document.getElementById('popia').checked);
   document.getElementById('submitBtn').disabled = !ok;
 }
+
 async function onSubmit(){
   if(!allAnswered()){ showToast('Please answer all questions'); return; }
   if(needsPOPIA() && !document.getElementById('popia').checked){
@@ -222,7 +248,7 @@ async function onSubmit(){
   const answers = QUESTIONS.map(q=>{
     const score=Number(document.querySelector(`input[name="${q.id}"]:checked`).value);
     const choice=CHOICES.find(c=>c.score===score);
-    return {questionId:q.id,choiceLabel:choice.label,choiceScore:score};
+    return {questionId:q.id,choiceText:choice.text,choiceScore:score}; // send text (no emoji)
   });
   const payload = {
     clientId: `${Date.now()}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(16)}`,
@@ -237,10 +263,12 @@ async function onSubmit(){
       consent: document.getElementById('popia').checked || null
     }
   };
+
   const item = { apiUrl: CFG.apiUrl, body: payload, queuedAt: new Date().toISOString() };
   const ref = await OfflineQueue.add(item);
   try{ await sendNow(item); await OfflineQueue.remove(ref.key ?? null, ref.tmp ?? null); document.getElementById('thanks').style.display='grid'; }
   catch(e){ showToast('Saved offline — will auto-sync ⏳'); document.getElementById('thanks').style.display='grid'; }
+
   setTimeout(()=>{
     document.querySelectorAll('input[type=radio]').forEach(i=>i.checked=false);
     document.querySelectorAll('.choice').forEach(x=>x.classList.remove('active'));
@@ -250,25 +278,13 @@ async function onSubmit(){
   },50);
 }
 
-/* ==================  INIT (runs after DOM ready)  ================== */
+/* ====== INIT ====== */
+function updateBadge(){
+  const b=document.getElementById('netbadge'); if(!b) return;
+  if(navigator.onLine){ b.textContent='Online'; b.style.background='#0a7d24'; }
+  else { b.textContent='Offline (queued)'; b.style.background='#a33'; }
+}
 function init(){
-  // service worker + safe config (won’t overwrite apiUrl)
-  if (location.protocol.startsWith('http')){
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
-    (async()=>{
-      try{
-        const r=await fetch('./config.json?_=' + Date.now());
-        if (r.ok){
-          const cfg=await r.json();
-          if (cfg.storeId)     CFG.storeId = cfg.storeId;
-          if (cfg.deviceLabel) CFG.deviceLabel = cfg.deviceLabel;
-          if (cfg.deviceId)    CFG.deviceId = cfg.deviceId;
-        }
-      }catch{}
-      const f=document.getElementById('footer');
-      if (f) f.textContent=(CFG.storeId||'')+' • '+(CFG.deviceLabel||'');
-    })();
-  }
   renderQuestions();
   updateSubmitState();
   document.addEventListener('input',e=>{ if(['name','surname','phone','feedback','popia'].includes(e.target.id)) updateSubmitState(); });
