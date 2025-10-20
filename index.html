@@ -2,212 +2,163 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Customer Feedback Kiosk</title>
-<meta name="theme-color" content="#000000">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>Chicken Licken Feedback</title>
+
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
+
 <style>
+  *,*::before,*::after{box-sizing:border-box}
   :root{
-    --veil: rgba(255,255,255,.92);
-    --accent:#f97316;
-    --green:#16a34a; --green2:#22c55e; --yellow:#eab308; --orange:#f97316; --red:#dc2626;
+    --card-rgba: rgba(255,255,255,0.78);
+    --field-rgba: rgba(255,255,255,0.9);
+    --text:#111;
+    --cl:#ff6900; --green:#16a34a; --green2:#22c55e; --yellow:#facc15; --orange:#fb923c; --red:#dc2626;
   }
-  html,body{margin:0;background:#000;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .hero{min-height:100dvh;background:url('./background.jpg') center/cover no-repeat fixed;display:grid;place-items:center}
-  .wrap{width:min(1100px,94vw);background:var(--veil);border-radius:20px;padding:clamp(14px,3vw,28px);box-shadow:0 12px 40px rgba(0,0,0,.25)}
-  h1{margin:0 0 8px 0;font-weight:800}
-  .subtitle{color:#444;margin-bottom:14px}
-  .q{margin:12px 0 18px}
-  .q-label{font-weight:700;margin-bottom:8px}
-  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-  @media (max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
-  @media (max-width:740px){.grid{grid-template-columns:repeat(2,1fr)}}
-  .choice{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 12px;border:2px solid transparent;border-radius:14px;cursor:pointer;min-height:64px;text-align:center;font-weight:800;color:#fff}
-  .choice input{display:none}
-  .choice[data-score="5"]{background:var(--green)}
-  .choice[data-score="4"]{background:var(--green2)}
-  .choice[data-score="3"]{background:var(--yellow); color:#111}
-  .choice[data-score="2"]{background:var(--orange)}
-  .choice[data-score="1"]{background:var(--red)}
-  .choice.active{outline:3px solid rgba(255,255,255,.85)}
-  .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media (max-width:720px){.row{grid-template-columns:1fr}}
-  input[type=text],textarea{width:100%;padding:12px;border:1.6px solid #ddd;border-radius:12px;font-size:16px;background:#fff}
-  textarea{min-height:90px;resize:vertical}
-  .ck{display:flex;align-items:flex-start;gap:10px}.ck input{margin-top:4px}
-  .actions{display:flex;gap:12px;margin-top:16px;align-items:center}
-  .btn{background:var(--accent);color:#fff;border:0;border-radius:14px;padding:14px 18px;font-weight:800;font-size:18px;cursor:pointer}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .muted{color:#666;font-size:14px}
-  .thanks{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.66)}
-  .thanks .inner{background:#fff;padding:24px;border-radius:18px;text-align:center;width:min(480px,92vw);box-shadow:0 16px 50px rgba(0,0,0,.4)}
-  .footer{margin-top:8px;color:#444;font-size:14px;text-align:center}
+  html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:#000}
+  .hero{
+    min-height:100dvh;
+    background-image:url('./background.jpg');
+    background-repeat:repeat;
+    background-size:160px auto;
+    background-position:top left;
+    display:grid;place-items:start center;
+    padding:14px 2vw 24px;
+  }
+  .wrap{width:min(860px,96vw);background:transparent}
+  h1{margin:0 0 10px;text-align:center;color:#fff;font-weight:900;font-size:28px;text-shadow:0 2px 8px rgba(0,0,0,.55)}
+  .grid{display:grid;gap:10px}
+  .card{background:var(--card-rgba);border-radius:14px;padding:12px;box-shadow:0 10px 24px rgba(0,0,0,.22);backdrop-filter:saturate(120%) blur(2px)}
+  .q-title{font-weight:900;font-size:20px;line-height:1.25;margin-bottom:10px;color:var(--text);letter-spacing:.2px}
+  @media (max-width:640px){.q-title{font-size:18px}}
+  .q-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .opt{display:grid;place-items:center;gap:4px;padding:10px;min-height:64px;border-radius:12px;color:#fff;font-weight:800;cursor:pointer;border:2px solid transparent;user-select:none}
+  .opt.active{outline:3px solid #000}
+  .opt[data-score="5"]{background:var(--green)}
+  .opt[data-score="4"]{background:var(--green2)}
+  .opt[data-score="3"]{background:var(--yellow);color:#111}
+  .opt[data-score="2"]{background:var(--orange)}
+  .opt[data-score="1"]{background:var(--red)}
+  .emo{font-size:22px}
+  .lbl{font-size:13px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+  input,textarea{width:100%;padding:10px;border:1.4px solid #ddd;border-radius:10px;font-size:15px;min-width:0;background:var(--field-rgba)}
+  textarea{min-height:64px;resize:vertical}
+  .row-end{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .btn{background:#000;color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:900;font-size:17px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+  .btn:hover{filter:brightness(0.92)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .muted{color:#ffffff;opacity:.9;font-size:13px;min-height:18px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .thanks{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);place-items:center;z-index:20}
+  .thanks .in{background:#fff;padding:22px;border-radius:16px;text-align:center;width:min(420px,92vw);box-shadow:0 18px 54px rgba(0,0,0,.4)}
+  .error{outline:2px solid #dc2626}
 </style>
 </head>
 <body>
-  <div class="hero">
-    <div class="wrap">
-      <h1>Quick Service Feedback</h1>
-      <div class="subtitle">Please tap one answer per question.</div>
+<script>
+  // kill any old caches/sw
+  if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));}
+  if('caches' in window){caches.keys().then(k=>k.forEach(c=>caches.delete(c)));}
 
-      <div id="questions"></div>
+  // auto-update from version.json
+  (function autoUpdate(){
+    const POLL_MS = 15*60*1000;
+    function check(){
+      fetch('./version.json?ts='+Date.now())
+        .then(r=>r.json())
+        .then(v=>{
+          const cur = localStorage.getItem('appVersion');
+          if(!cur) localStorage.setItem('appVersion', v.version);
+          if(cur && cur !== v.version){
+            localStorage.setItem('appVersion', v.version);
+            location.reload(true);
+          }
+        }).catch(()=>{});
+    }
+    check(); setInterval(check, POLL_MS);
+  })();
+</script>
 
-      <div class="card" style="margin-top:16px">
-        <h3>Optional details</h3>
-        <div class="row">
-          <input id="name" type="text" placeholder="Name (optional)">
-          <input id="surname" type="text" placeholder="Surname (optional)">
-        </div>
-        <div class="row" style="margin-top:10px">
-          <input id="phone" type="text" placeholder="Phone (optional)">
-          <textarea id="feedback" placeholder="Additional feedback (optional)"></textarea>
-        </div>
-        <div class="ck" style="margin-top:10px">
-          <input id="popia" type="checkbox">
-          <label for="popia">I consent to the collection and processing of my personal information for customer service and quality feedback purposes, in accordance with the POPIA.</label>
-        </div>
-        <div class="muted" style="margin-top:6px">You don’t need to share personal details. If you do, ticking consent is required.</div>
+<div class="hero">
+  <div class="wrap">
+    <h1>Chicken Licken Quick Feedback</h1>
+
+    <div id="qList" class="grid"></div>
+    <div style="height:10px"></div>
+
+    <div class="card">
+      <h3 style="margin:0 0 6px;color:#111">Optional details</h3>
+      <div style="font-size:12px;color:#444;margin-top:4px">
+        If you share any details below, <b>Name</b>, <b>Surname</b> and a <b>10-digit Phone</b> are required and you must accept POPIA.
       </div>
-
-      <div class="actions">
-        <button id="submitBtn" class="btn" disabled>Submit</button>
-        <div class="muted" id="statusTxt"></div>
+      <div class="grid2" style="margin-top:8px">
+        <div><input id="name" placeholder="Name (required if details provided)" autocomplete="off"></div>
+        <div><input id="surname" placeholder="Surname (required if details provided)" autocomplete="off"></div>
       </div>
+      <div class="grid2" style="margin-top:8px">
+        <div><input id="phone" placeholder="Phone (10 digits, required if details provided)" maxlength="10" autocomplete="off"></div>
+        <div><input id="email" placeholder="Email (optional)" autocomplete="off"></div>
+      </div>
+      <div style="margin-top:8px">
+        <textarea id="feedback" placeholder="Additional feedback (optional)" autocomplete="off"></textarea>
+      </div>
+      <label style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;margin-top:8px">
+        <input type="checkbox" id="popia" style="margin-top:4px">
+        <small>I consent to the collection and processing of my personal information for customer service and quality feedback purposes in accordance with POPIA.</small>
+      </label>
+      <label style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;margin-top:6px">
+        <input type="checkbox" id="mk" style="margin-top:4px">
+        <small>I agree to receive marketing communications and promotions. I understand I can withdraw consent at any time.</small>
+      </label>
+    </div>
 
-      <div class="footer" id="footer"></div>
+    <div class="row-end">
+      <div class="muted" id="storeTag"></div>
+      <div class="muted" id="statusTxt"></div>
+      <button class="btn" id="submitBtn" disabled>Submit</button>
     </div>
   </div>
+</div>
 
-  <div class="thanks" id="thanks">
-    <div class="inner">
-      <h2>Thank you!</h2>
-      <p>Your feedback has been recorded.</p>
-      <button class="btn" id="againBtn">Done</button>
-    </div>
+<div class="thanks" id="thanks">
+  <div class="in">
+    <h2>Thank you!</h2>
+    <p>Your feedback has been recorded.</p>
+    <button class="btn" id="againBtn">Done</button>
   </div>
+</div>
 
 <script>
-// --------- HARD-WIRED CONFIG (no external override) ----------
-const CFG = {
-  apiUrl: "https://script.google.com/macros/s/AKfycbycyHFK71NRoQKlaGr7j8I22lMBymjKhK9pFqIrWSnzUcWuqpiFaTAmW4k0yenyL_4zag/exec", // <-- PASTE YOUR /exec URL
-  storeId: "CL-PRETORIA-001",
-  deviceLabel: "Front Counter",
-  deviceId: ""
+function normSpaces(s){return (s||'').replace(/\+/g,' ').trim();}
+function getParamAny(keys){const u=new URL(location.href);for(const k of keys){const v=u.searchParams.get(k);if(v)return normSpaces(v);}if(u.hash&&u.hash.includes('=')){const h=new URLSearchParams(u.hash.replace(/^#/,''));for(const k of keys){const v=h.get(k);if(v)return normSpaces(v);}}return '';}
+function getDeviceId(){const keys=['deviceId','deviceid','did','DeviceId','DEVICEID'];let v=getParamAny(keys);if(v){localStorage.setItem('cl_deviceId',v);return v;}v=localStorage.getItem('cl_deviceId')||'';if(v)return v;v=(prompt('Enter device ID (e.g. A9-Front-01)')||'').trim();if(v)localStorage.setItem('cl_deviceId',v);return v;}
+function getParam(k){const u=new URL(location.href);return normSpaces(u.searchParams.get(k));}
+const CFG={
+  apiUrl:"https://script.google.com/macros/s/AKfycbzTA4Snedeo9_1o0NcJFKOCF2IFqFP73z_5usNZ1qsqjdLusZVXIUke8inp7raML_Ws/exec",   // <<< from your new deployment under chickenlickenandries@gmail.com
+  token:"CHANGE_ME_SUPER_SECRET",      // <<< must match SHARED_TOKEN in Apps Script
+  storeId:getParam('store')||'CL-Witbank-Highveld',
+  deviceLabel:getParam('device')||'Front Counter',
+  deviceId:getDeviceId()
 };
-
-// --------- QUESTIONS UI (simple, reliable) ----------
-const QUESTIONS=[
-  {id:'Q1',text:'Speed of service'},
-  {id:'Q2',text:'Friendliness of staff'},
-  {id:'Q3',text:'Order accuracy'},
-  {id:'Q4',text:'Cleanliness of store'},
-  {id:'Q5',text:'Overall experience'}
-];
-const CHOICES=[
-  {label:'Excellent',score:5},
-  {label:'Good',     score:4},
-  {label:'Average',  score:3},
-  {label:'Poor',     score:2},
-  {label:'Bad',      score:1}
-];
-
-function renderQuestions(){
-  const qWrap=document.getElementById('questions');
-  qWrap.innerHTML='';
-  QUESTIONS.forEach(q=>{
-    const el=document.createElement('div'); el.className='q';
-    el.innerHTML=`
-      <div class="q-label">${q.text}</div>
-      <div class="grid" data-qid="${q.id}">
-        ${CHOICES.map(c=>`
-          <label class="choice" data-score="${c.score}">
-            <input type="radio" name="${q.id}" value="${c.score}">
-            <span class="label">${c.label}</span>
-          </label>
-        `).join('')}
-      </div>`;
-    qWrap.appendChild(el);
-  });
-  qWrap.querySelectorAll('.grid').forEach(grid=>{
-    grid.addEventListener('click',e=>{
-      const lab = e.target.closest('.choice'); if(!lab) return;
-      grid.querySelectorAll('.choice').forEach(x=>x.classList.remove('active'));
-      lab.classList.add('active');
-      const inp=lab.querySelector('input'); if(inp) inp.checked=true;
-      updateSubmitState();
-    });
-  });
-}
-
-function allAnswered(){
-  return QUESTIONS.every(q => !!document.querySelector(`input[name="${q.id}"]:checked`));
-}
-function needsPOPIA(){
-  return !!(document.getElementById('name').value.trim()||
-            document.getElementById('surname').value.trim()||
-            document.getElementById('phone').value.trim());
-}
-function updateSubmitState(){
-  const ok = allAnswered() && (!needsPOPIA() || document.getElementById('popia').checked);
-  document.getElementById('submitBtn').disabled = !ok;
-}
-
-async function onSubmit(){
-  if(!allAnswered()){ document.getElementById('statusTxt').textContent='Please answer all questions'; return; }
-  if(needsPOPIA() && !document.getElementById('popia').checked){
-    document.getElementById('statusTxt').textContent='Please tick POPIA consent if you provide personal details'; return;
-  }
-  const answers = QUESTIONS.map(q=>{
-    const score=Number(document.querySelector(`input[name="${q.id}"]:checked`).value);
-    const choice=CHOICES.find(c=>c.score===score);
-    return {questionId:q.id,choiceLabel:choice.label,choiceScore:score};
-  });
-  const payload = {
-    storeId: CFG.storeId,
-    deviceLabel: CFG.deviceLabel,
-    deviceId: CFG.deviceId || '',
-    pressedAtUtc: new Date().toISOString(),
-    answers,
-    customer:{
-      name:document.getElementById('name').value.trim(),
-      surname:document.getElementById('surname').value.trim(),
-      phone:document.getElementById('phone').value.trim(),
-      feedback:document.getElementById('feedback').value.trim(),
-      consent: document.getElementById('popia').checked || null
-    }
-  };
-
-  try{
-    const r = await fetch(CFG.apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const txt = await r.text();
-    if (!r.ok || !/\"ok\"\s*:\s*true/.test(txt)) throw new Error(txt);
-    document.getElementById('thanks').style.display='grid';
-    // reset UI for next user
-    document.querySelectorAll('input[type=radio]').forEach(i=>i.checked=false);
-    document.querySelectorAll('.choice').forEach(x=>x.classList.remove('active'));
-    ['name','surname','phone','feedback'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('popia').checked=false;
-    updateSubmitState();
-    document.getElementById('statusTxt').textContent='';
-  } catch (e) {
-    document.getElementById('statusTxt').textContent = 'Network/server error';
-  }
-}
-
-function init(){
-  renderQuestions();
-  updateSubmitState();
-  document.addEventListener('input',e=>{
-    if(['name','surname','phone','feedback','popia'].includes(e.target.id)) updateSubmitState();
-  });
-  document.getElementById('submitBtn').addEventListener('click', onSubmit);
-  document.getElementById('againBtn').addEventListener('click',()=>{ document.getElementById('thanks').style.display='none'; });
-}
-window.addEventListener('DOMContentLoaded', init);
+const QUESTIONS=[{id:'Q1',text:'Speed of service'},{id:'Q2',text:'Friendliness of staff'},{id:'Q3',text:'Order accuracy'},{id:'Q4',text:'Cleanliness of store'},{id:'Q5',text:'Overall experience'}];
+const CHOICES=[{txt:'Excellent',score:5,emo:'😄'},{txt:'Good',score:4,emo:'🙂'},{txt:'Average',score:3,emo:'😐'},{txt:'Poor',score:2,emo:'🙁'},{txt:'Bad',score:1,emo:'😡'}];
+function makeQuestion(q){const card=document.createElement('div');card.className='card';const title=document.createElement('div');title.className='q-title';title.textContent=q.text;const row=document.createElement('div');row.className='q-row';row.dataset.qid=q.id;CHOICES.forEach(c=>{const d=document.createElement('div');d.className='opt';d.dataset.score=c.score;d.innerHTML=`<div class="emo">${c.emo}</div><div class="lbl">${c.txt}</div>`;d.addEventListener('click',()=>{row.querySelectorAll('.opt').forEach(x=>x.classList.remove('active'));d.classList.add('active');updateSubmitState();});row.appendChild(d);});card.appendChild(title);card.appendChild(row);return card;}
+function render(){const list=document.getElementById('qList');list.innerHTML='';QUESTIONS.forEach(q=>list.appendChild(makeQuestion(q)));document.getElementById('storeTag').textContent=`${CFG.storeId} • ${CFG.deviceLabel} • ${CFG.deviceId||'no deviceId'}`;}
+render();
+function val(id){return(document.getElementById(id).value||'').trim();}
+function detailsAnyFilled(){return!!(val('name')||val('surname')||val('phone')||val('email')||val('feedback'));}
+function allAnswered(){return QUESTIONS.every(q=>document.querySelector(`.q-row[data-qid="${q.id}"] .opt.active`));}
+function markError(id,on){const el=document.getElementById(id);if(el)el.classList.toggle('error',!!on);}
+function updateSubmitState(){let ok=allAnswered();const any=detailsAnyFilled();const requireName=any&&!val('name');const requireSurname=any&&!val('surname');const phoneVal=val('phone');const requirePhone=any&&!/^\d{10}$/.test(phoneVal);const requirePOPIA=any&&!document.getElementById('popia').checked;const em=val('email');const badEmail=em&&!/.+@.+\..+/.test(em);markError('name',requireName);markError('surname',requireSurname);markError('phone',requirePhone);if(requireName||requireSurname||requirePhone||requirePOPIA||badEmail)ok=false;document.getElementById('submitBtn').disabled=!ok;}
+document.addEventListener('input',updateSubmitState);
+document.getElementById('submitBtn').addEventListener('click',async()=>{if(!allAnswered()){toast('Please answer all questions');return;}const any=detailsAnyFilled();if(any){if(!val('name')){toast('Please enter your Name');return;}if(!val('surname')){toast('Please enter your Surname');return;}const ph=val('phone');if(!/^\d{10}$/.test(ph)){toast('Please enter a valid 10-digit Phone');return;}if(!document.getElementById('popia').checked){toast('Tick POPIA consent when providing personal details');return;}}const em=val('email');if(em&&!/.+@.+\..+/.test(em)){toast('Enter a valid Email');return;}const answers=QUESTIONS.map(q=>{const el=document.querySelector(`.q-row[data-qid="${q.id}"] .opt.active`);const score=Number(el.dataset.score);const ch=CHOICES.find(c=>c.score===score);return{questionId:q.text,choiceText:ch.txt,choiceScore:score};});const payload={token:CFG.token,clientId:`${Date.now()}-${Math.random().toString(16).slice(2)}`,storeId:CFG.storeId,deviceLabel:CFG.deviceLabel,deviceId:CFG.deviceId,pressedAtUtc:new Date().toISOString(),answers,marketingConsent:document.getElementById('mk').checked===true,customer:{name:val('name'),surname:val('surname'),phone:val('phone'),email:val('email'),feedback:val('feedback'),consent:document.getElementById('popia').checked||null}};try{await fetch(CFG.apiUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),keepalive:true});showThanks();}catch(err){console.error(err);toast('Network error');}});
+function showThanks(){document.getElementById('thanks').style.display='grid';}
+document.getElementById('againBtn').addEventListener('click',()=>{document.getElementById('thanks').style.display='none';document.querySelectorAll('.opt').forEach(x=>x.classList.remove('active'));['name','surname','phone','email','feedback'].forEach(id=>document.getElementById(id).value='');document.getElementById('popia').checked=false;document.getElementById('mk').checked=false;updateSubmitState();});
+function toast(msg){const s=document.getElementById('statusTxt');if(!s)return;s.textContent=msg;clearTimeout(s._t);s._t=setTimeout(()=>s.textContent='',2500);}
 </script>
 </body>
 </html>
